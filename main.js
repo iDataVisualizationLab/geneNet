@@ -9,7 +9,7 @@ d3.csv('data/Gene_Entry.csv').then(data => {
 function handleData(_data) {
     debugger
     // const data = _data.filter(d=>(d['Status']==='Approved')&&((d['Previous Symbols']!=='')||(d['Synonyms']!=='') )).slice(0,300);
-    const data = _data.filter(d => d['Previous Symbols']).slice(0, _data.length / 10);
+    const data = _data.filter(d => d['Previous Symbols']).slice(0, _data.length/100);
 
     const nodesObject = {};
     let nodes = [];
@@ -23,6 +23,8 @@ function handleData(_data) {
             nodes.push(node)
         } else {
             nodesObject[_id].data = d;
+            if (!nodesObject[_id].color)
+                nodesObject[_id].color = 'green';
         }
 
         d['Previous Symbols'] = d['Previous Symbols'].split(',');
@@ -36,7 +38,8 @@ function handleData(_data) {
                     nodes.push(node)
                 } else {
                     nodesObject[id].data = d;
-                    nodesObject[id].color = 'green';
+                    if (nodesObject[id].color!=='red')
+                        nodesObject[id].color = 'green';
                 }
                 const link = {source: id, target: _id, color: 'red'};
                 nodesObject[id].relatedNode.push(nodesObject[_id]);
@@ -59,7 +62,8 @@ function handleData(_data) {
                     nodes.push(node)
                 } else {
                     nodesObject[id].data = d;
-                    nodesObject[id].color = 'green';
+                    if (nodesObject[id].color!=='blue')
+                        nodesObject[id].color = 'green';
                 }
                 const link = {source: id, target: _id, color: 'blue'};
                 nodesObject[id].relatedNode.push(nodesObject[_id]);
@@ -91,8 +95,8 @@ function handleData(_data) {
 
 function drawNet(divID, {width, height}) {
     let force = d3.forceSimulation()
-        .force("link", d3.forceLink().id(d => d.id).distance(20))
-        .force("charge", d3.forceManyBody().strength(-5))
+        .force("link", d3.forceLink().id(d => d.id).distance(10).strength(1))
+        .force("charge", d3.forceManyBody().strength(-3))
         .force("center", d3.forceCenter(width / 2, height / 2))
         .on('tick', ticked);
     let node, link;
