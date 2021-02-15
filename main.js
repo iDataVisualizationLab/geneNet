@@ -9,9 +9,11 @@ d3.csv('data/Gene_Entry.csv').then(data => {
 function handleData(_data) {
     debugger
     // const data = _data.filter(d=>(d['Status']==='Approved')&&((d['Previous Symbols']!=='')||(d['Synonyms']!=='') )).slice(0,300);
-    const data = _data.filter(d => d['Previous Symbols']).slice(0, _data.length/100);
+    const data = _data.filter(d => d['Previous Symbols']);
+    // const data = _data.filter(d => d['Previous Symbols']).slice(921, 921+_data.length/50);
 
     const nodesObject = {};
+    const linksObject = {};
     let nodes = [];
     let links = [];
 
@@ -31,23 +33,30 @@ function handleData(_data) {
         d['Previous Symbols'].forEach(id => {
             id = id.trim();
             if (id !== '') {
-                const row = _data.find(f => f['Approved Symbol'] === id);
-                if (!nodesObject[id]) {
-                    const node = {id, data: row, color: 'red', relatedLink:[],relatedNode:[]};
-                    nodesObject[id] = node;
-                    nodes.push(node)
-                } else {
-                    nodesObject[id].data = d;
-                    if (nodesObject[id].color!=='red')
-                        nodesObject[id].color = 'green';
+                if (!linksObject[_id+'|'+id] || !linksObject[id+'|'+_id]) {
+                    const row = _data.find(f => f['Approved Symbol'] === id);
+                    if (!nodesObject[id]) {
+                        const node = {id, data: row, color: 'red', relatedLink: [], relatedNode: []};
+                        nodesObject[id] = node;
+                        nodes.push(node)
+                    } else {
+                        nodesObject[id].data = d;
+                        if (nodesObject[id].color !== 'red')
+                            nodesObject[id].color = 'green';
+                    }
+                    const link = {source: id, target: _id, color: 'red',value:1};
+                    nodesObject[id].relatedNode.push(nodesObject[_id]);
+                    nodesObject[id].relatedLink.push(link);
+                    nodesObject[_id].relatedNode.push(nodesObject[id]);
+                    nodesObject[_id].relatedLink.push(link);
+                    linksObject[id+'|'+_id] = link;
+                    links.push(link);
+                }else{
+                    if (linksObject[_id+'|'+id])
+                        linksObject[_id+'|'+id].twoside = true;
+                    else
+                        linksObject[id+'|'+_id].value ++;
                 }
-                const link = {source: id, target: _id, color: 'red'};
-                nodesObject[id].relatedNode.push(nodesObject[_id]);
-                nodesObject[id].relatedLink.push(link);
-                nodesObject[_id].relatedNode.push(nodesObject[id]);
-                nodesObject[_id].relatedLink.push(link);
-
-                links.push(link);
             }
         });
 
@@ -55,6 +64,7 @@ function handleData(_data) {
         d['Synonyms'].forEach(id => {
             id = id.trim();
             if (id !== '') {
+                if (!linksObject[_id+'|'+id] || !linksObject[id+'|'+_id]) {
                 const row = _data.find(f => f['Approved Symbol'] === id);
                 if (!nodesObject[id]) {
                     const node = {id, data: row, color: 'blue', relatedLink:[],relatedNode:[]};
@@ -70,14 +80,21 @@ function handleData(_data) {
                 nodesObject[id].relatedLink.push(link);
                 nodesObject[_id].relatedNode.push(nodesObject[id]);
                 nodesObject[_id].relatedLink.push(link);
+                    linksObject[id+'|'+_id] = link;
                 links.push(link);
+                }else{
+                    if (linksObject[_id+'|'+id])
+                        linksObject[_id+'|'+id].twoside = true;
+                    else
+                        linksObject[id+'|'+_id].value ++;
+                }
             }
         });
 
     });
 
     nodes.forEach(n=>{
-        if (n.relatedLink.length===1){
+        if (n.relatedLink.length===1 && (!n.relatedLink[0].twoside)){
             if (n.relatedNode[0].color==='red'){
                 if (n.relatedNode[0].relatedLink.length===1){
                     n.delete = true;
@@ -101,12 +118,26 @@ function drawNet(divID, {width, height}) {
         .on('tick', ticked);
     let node, link;
     // const color = d3.scaleOrdinal(graph.keys, d3.schemeCategory10).unknown("#ccc")
-
+    const markerBoxWidth = 5, markerBoxHeight = 5,refX = markerBoxWidth / 2,refY = markerBoxHeight / 2,markerWidth = markerBoxWidth / 2,markerHeight = markerBoxHeight / 2,
+        arrowPoints = [[0, 0], [0, markerBoxHeight], [markerBoxWidth, markerHeight]];
     const svg = d3.select(divID)
         .attr("viewBox", [0, 0, width, height]);
     // .attr("width", width)
     // .attr("height", height);
-
+    svg.append('defs')
+        .selectAll('marker')
+        .data(['red','green','black'])
+        .enter().append('marker')
+        .attr('id',d=> 'arrow'+d)
+        .attr('viewBox', [0, 0, markerBoxWidth, markerBoxHeight])
+        .attr('refX', refX)
+        .attr('refY', refY)
+        .attr('markerWidth', markerBoxWidth)
+        .attr('markerHeight', markerBoxHeight)
+        .attr('orient', 'auto-start-reverse')
+        .append('path')
+        .attr('d', d3.line()(arrowPoints))
+        .attr('stroke', d=>d);
 
     const linksPath = svg.append("g")
         .attr("class", "links")
@@ -141,7 +172,9 @@ function drawNet(divID, {width, height}) {
             .selectAll("line")
             .data(links)
             .join("line")
-            .attr('stroke', d => d.color ?? 'black');
+            .attr('marker-start',d=> d.twoside?'url(#arrowgreen)':null)
+            .attr('marker-end', d=>d.twoside?'url(#arrowgreen)':`url(#arrow${(d.color ?? 'black')})`)
+            .attr('stroke', d => d.twoside?'green':(d.color ?? 'black'));
     };
 
     function ticked() {
