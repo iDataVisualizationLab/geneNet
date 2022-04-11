@@ -1,4 +1,6 @@
-d3.csv('data/Gene_Entry.csv').then(data => {
+othersource = {};
+d3.csv('data/Gene_Entry.csv').then(data => {othersource=data})
+d3.tsv('data/hgnc_complete_set.txt').then(data => {
     const width = 6040, height = 4180;
 
     const Net = drawNet('#svg_main', {width, height});
@@ -9,7 +11,14 @@ d3.csv('data/Gene_Entry.csv').then(data => {
 function handleData(_data) {
     debugger
     // const data = _data.filter(d=>(d['Status']==='Approved')&&((d['Previous Symbols']!=='')||(d['Synonyms']!=='') )).slice(0,300);
-    const data = _data.filter(d => d['Previous Symbols']);
+    // const data = _data.filter(d => d['Previous Symbols']);
+    _data.forEach(d=>{
+        d['Previous Symbols'] = d['prev_symbol'].split('|').join(',');
+        d['Synonyms'] = d['alias_symbol'].split('|').join(',');
+        d['Approved Symbol'] = d['symbol'];
+        return d;
+    });
+    // const data = _data.filter(d => d['HGNC ID']==='HGNC:11025');
     // const data = _data.filter(d => d['Previous Symbols']).slice(921, 921+_data.length/50);
 
     const nodesObject = {};
