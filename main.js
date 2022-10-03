@@ -19,7 +19,7 @@ function handleData(_data) {
         return d;
     });
     // const data = _data.filter(d => d['HGNC ID']==='HGNC:11025');
-    // const data = _data.filter(d => d['Previous Symbols']).slice(921, 921+_data.length/50);
+    const data = _data.filter(d => d['Previous Symbols']).slice(921, 921+_data.length/50);
 
     const nodesObject = {};
     const linksObject = {};
